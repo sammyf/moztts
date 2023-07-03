@@ -1,5 +1,4 @@
-ipython
-num2words
-omegaconf
-pydub
-PyYAML
+TTS
+
+
+
