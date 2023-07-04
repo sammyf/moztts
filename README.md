@@ -16,7 +16,7 @@ That's it.
 ### Use
 The UI works pretty much like the Silero_tts extension (very probably because I reused most of the code).
 
-####Additional options are
+#### Additional options are
 
 * **Use Cuda** : I won't even start to explain what it does.
 * **Speaker** : this is empty for most voices, but some voice-models have multiple "speakers" in one file. You can choose 
@@ -35,3 +35,5 @@ isn't great. Once the model is loaded the TTS generation is usually quite fast (
 that I found so far ... there are really tons of them), but don't be afraid to try other out. 
 Not everybody thinks "bored woman after a night of partying" is a great voice for a LLM.
 
+#### Sample Voices
+I added a script to generate samples of all english non-vocoder voices. You don't need to run it, as the samples are included in the directory `samples` (I'm sure you wouldn't have guessed). There is also a nifty libreoffice sheet with timing information on each voice called `timing.csv`. 
