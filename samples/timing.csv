@@ -1,4 +1,4 @@
-Voice;Speaker;Processing time;Filename
+Voice,Speaker,Processing time,Filename
 tts_models/en/blizzard2013/capacitron-t2-c150_v2,(single_speaker),0.744495153427124,samples/tts_models__en__blizzard2013__capacitron-t2-c150_v2__(single_speaker).wav
 tts_models/en/blizzard2013/capacitron-t2-c50,(single_speaker),0.6859509944915771,samples/tts_models__en__blizzard2013__capacitron-t2-c50__(single_speaker).wav
 tts_models/en/ek1/tacotron2,(single_speaker),7.082503318786621,samples/tts_models__en__ek1__tacotron2__(single_speaker).wav
