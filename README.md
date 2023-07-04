@@ -1,9 +1,13 @@
 ## MOZTTS
 
+#### What's new
+there is a new file called tts_character_config.json. You can edit it to preset voices for your custom characters. The key should be the same as the character's name, and the description field isn't actively used, but nifty to add notes for the voice.
+
 #### What is it?
 
 This extension for Oobabooga's Text Generation Web UI adds another method to 
 generate Text To Speech files, this time using [Mozilla TTS](https://github.com/mozilla/TTS).
+It supports multiple characters.
 
 ### Installation
 clone this directory in the `extensions` directory. 
