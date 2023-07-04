@@ -7,11 +7,16 @@ from modules import chat, shared
 import re
 import subprocess
 import json
+import glob, os
 
 torch._C._jit_set_profiling_mode(False)
 
+global tts_character_config
 with open('extensions/moztts/tts_config.json') as f:
     ttsconfig = json.load(f)
+
+with open('extensions/moztts/tts_character_config.json') as f:
+    tts_character_config = json.load(f)
 
 
 params = {
@@ -109,6 +114,17 @@ def state_modifier(state):
     state['stream'] = False
     return state
 
+def clear_output_dir():
+    # Specify the directory you want to delete files from
+    dir_path = 'extensions/moztts/outputs/'
+
+    # Use glob to match all files in the directory
+    files = glob.glob(f'{dir_path}/*')
+
+    # Loop over the list of filepaths & remove each file.
+    for file in files:
+        if os.path.isfile(file):
+            os.remove(file)
 
 def input_modifier(string):
     global old_params, current_params
@@ -137,8 +153,12 @@ def history_modifier(history):
     return history
 
 
-def output_modifier(string):
-    global current_params, streaming_state
+def output_modifier(string, state):
+    global current_params, streaming_state, ttsconfig
+
+    if state["character_menu"] in tts_character_config:
+        params["voice"] = tts_character_config[state["character_menu"]]["voice"]
+        params["speaker"] = tts_character_config[state["character_menu"]]["speaker"]
 
     print( params)
     if not params['activate']:
@@ -149,7 +169,7 @@ def output_modifier(string):
     if string == '':
         string = '*Empty reply, try regenerating*'
     else:
-        output_file = Path(f'extensions/moztts/outputs/{shared.character}_{int(time.time())}.wav')
+        output_file = Path(f'extensions/moztts/outputs/{state["character_menu"]}_{int(time.time())}.wav')
         voice_string = f'--model_name={params["voice"]}'
         if "vocoder" in params['voice']:
             voice_string = f'--vocoder_name={params["voice"]}'
@@ -192,6 +212,10 @@ def ui():
             convert = gr.Button('Permanently replace audios with the message texts')
             convert_cancel = gr.Button('Cancel', visible=False)
             convert_confirm = gr.Button('Confirm (cannot be undone)', variant="stop", visible=False)
+        with gr.Row():
+            clear = gr.Button('Permanently delete generated audios files from your drive')
+            clear_cancel = gr.Button('Cancel', visible=False)
+            clear_confirm = gr.Button('Confirm (cannot be undone)', variant="stop", visible=False)
         gr.Markdown('you need to write something to the LLM and then reload the page if the selected voices needs a speaker idx.')
     # Convert history with confirmation
     convert_arr = [convert_confirm, convert, convert_cancel]
@@ -199,6 +223,14 @@ def ui():
     convert_confirm.click(
         lambda: [gr.update(visible=False), gr.update(visible=True), gr.update(visible=False)], None, convert_arr).then(
         remove_tts_from_history, None, None).then(
+        chat.save_history, shared.gradio['mode'], None, show_progress=False).then(
+        chat.redraw_html, shared.reload_inputs, shared.gradio['display'])
+    # Clear outputs with confirmation
+    clear_arr = [clear_confirm, clear, clear_cancel]
+    clear.click(lambda: [gr.update(visible=True), gr.update(visible=False), gr.update(visible=True)], None, clear_arr)
+    clear_confirm.click(
+        lambda: [gr.update(visible=False), gr.update(visible=True), gr.update(visible=False)], None, clear_arr).then(
+        clear_output_dir, None, None).then(
         chat.save_history, shared.gradio['mode'], None, show_progress=False).then(
         chat.redraw_html, shared.reload_inputs, shared.gradio['display'])
 

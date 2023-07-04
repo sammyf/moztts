@@ -1,0 +1,17 @@
+{
+	"Shadow": {
+		"description": "Sexy stoned female voice",
+		"voice": "tts_models/en/vctk/vits",
+		"speaker": "p311"
+	},
+	"Beezle": {
+		"description": "Nasal male voice",
+		"voice": "tts_models/en/vctk/vits",
+		"speaker": "p264"
+	},
+	"Beezle Alternative": {
+		"description": "Less nasal male voice",
+		"voice": "tts_models/en/vctk/vits",
+		"speaker": "p340"
+	}
+}

@@ -1,10 +1,11 @@
 {
     "activate": true,
-    "voice": "tts_models/en/vctk/vits",
-    "speaker": "p311",
     "language": "en",
     "show_text": true,
     "autoplay": true,
     "use_cuda": true,
+	"description": "sexy stoned female voice",
+	"voice": "tts_models/en/vctk/vits",
+	"speaker": "p311",
     "local_cache_path": ""
 }
