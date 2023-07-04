@@ -34,6 +34,9 @@ current_params = params.copy()
 global old_params
 old_params = params.copy()
 
+global lastCharacter
+lastCharacter = "---"
+
 # Used for making text xml compatible, needed for voice pitch and speed control
 table = str.maketrans({
     "<": "&lt;",
@@ -154,11 +157,14 @@ def history_modifier(history):
 
 
 def output_modifier(string, state):
-    global current_params, streaming_state, ttsconfig
+    global current_params, streaming_state, ttsconfig, lastCharacter
 
-    if state["character_menu"] in tts_character_config:
-        params["voice"] = tts_character_config[state["character_menu"]]["voice"]
-        params["speaker"] = tts_character_config[state["character_menu"]]["speaker"]
+    ## use the preset character voice, if the character was changed and we have a preset for it.
+    if lastCharacter != state["character_menu"]:
+        lastCharacter = state["character_menu"]
+        if state["character_menu"] in tts_character_config:
+            params["voice"] = tts_character_config[state["character_menu"]]["voice"]
+            params["speaker"] = tts_character_config[state["character_menu"]]["speaker"]
 
     print( params)
     if not params['activate']:
