@@ -9,6 +9,10 @@ import subprocess
 import json
 import glob, os
 
+from TTS.api import TTS
+from TTS.utils.manage import ModelManager
+from TTS.utils.synthesizer import Synthesizer
+
 torch._C._jit_set_profiling_mode(False)
 
 global tts_character_config
@@ -30,12 +34,36 @@ params = {
     'local_cache_path': ttsconfig['local_cache_path']
 }
 
+# load model manager
+MODEL_PATH = './tts_model/best_model.pth.tar'
+CONFIG_PATH = './tts_model/config.json'
+path = "extensions/moztts/models.json"
+manager = ModelManager(path, progress_bar=True)
+
+tts_path = None
+tts_config_path = None
+speakers_file_path = None
+language_ids_file_path = None
+vocoder_path = None
+vocoder_config_path = None
+encoder_path = None
+encoder_config_path = None
+vc_path = None
+vc_config_path = None
+model_dir = None
+model_path = None
+config_path = None
+model_item = None
+synthesizer = None
+
 current_params = params.copy()
 global old_params
 old_params = params.copy()
 
 global lastCharacter
 lastCharacter = "---"
+last_voice = params["voice"]
+
 
 # Used for making text xml compatible, needed for voice pitch and speed control
 table = str.maketrans({
@@ -45,6 +73,62 @@ table = str.maketrans({
     "'": "&apos;",
     '"': "&quot;",
 })
+def tts(sentence, outpath):
+    global tts_path, tts_config_path, speakers_file_path, language_ids_file_path, vocoder_path, vocoder_config_path, encoder_path, encoder_config_path, vc_path, vc_config_path, model_dir, model_path, config_path,model_item, synthesizer
+    if synthesizer is None:
+        load_model(params['voice'])
+
+    if tts_path is not None:
+        wav = synthesizer.tts(
+            sentence,
+            params['speaker'],
+            None,
+            None,
+            reference_wav=None,
+            style_wav=None,
+            style_text=None,
+            reference_speaker_name=None,
+        )
+    synthesizer.save_wav(wav, outpath)
+
+def load_model(model_name):
+    global tts_path, tts_config_path, speakers_file_path, language_ids_file_path, vocoder_path, vocoder_config_path, encoder_path, encoder_config_path, vc_path, vc_config_path, model_dir, model_path, config_path,model_item, synthesizer
+    model_path, config_path, model_item = manager.download_model(model_name)
+    # tts model
+    if model_item["model_type"] == "tts_models":
+        tts_path = model_path
+        tts_config_path = config_path
+        if "default_vocoder" in model_item:
+            vocoder_name = model_item["default_vocoder"]
+
+    # voice conversion model
+    if model_item["model_type"] == "voice_conversion_models":
+        vc_path = model_path
+        vc_config_path = config_path
+
+    # tts model with multiple files to be loaded from the directory path
+    if model_item.get("author", None) == "fairseq" or isinstance(model_item["model_url"], list):
+        model_dir = model_path
+        tts_path = None
+        tts_config_path = None
+        vocoder_name = None
+
+    # load models
+    synthesizer =  Synthesizer(
+        tts_path,
+        tts_config_path,
+        speakers_file_path,
+        language_ids_file_path,
+        vocoder_path,
+        vocoder_config_path,
+        encoder_path,
+        encoder_config_path,
+        vc_path,
+        vc_config_path,
+        model_dir,
+        "voices",
+        params['use_cuda'],
+    )
 
 def xmlesc(txt):
     return txt.translate(table)
@@ -63,7 +147,7 @@ def load_model_list():
     for match in matches:
         pattern = r"(\d+):\s(.+)"
         parts = re.findall(pattern, match)
-        if len(parts[0]) < 2:
+        if (len(parts[0]) < 2) or ("vocoder" in parts[0][1]):
             continue
         asterisk = ""
         fname = parts[0][1]
@@ -157,7 +241,10 @@ def history_modifier(history):
 
 
 def output_modifier(string, state):
-    global current_params, streaming_state, ttsconfig, lastCharacter
+    global current_params, streaming_state, ttsconfig, lastCharacter, last_voice
+
+    if not params['activate']:
+        return string
 
     ## use the preset character voice, if the character was changed and we have a preset for it.
     if lastCharacter != state["character_menu"]:
@@ -166,9 +253,9 @@ def output_modifier(string, state):
             params["voice"] = tts_character_config[state["character_menu"]]["voice"]
             params["speaker"] = tts_character_config[state["character_menu"]]["speaker"]
 
-    print( params)
-    if not params['activate']:
-        return string
+    if last_voice != params["voice"]:
+        load_model(params["voice"])
+        last_voice = params["voice"]
 
     original_string = string
 
@@ -176,15 +263,15 @@ def output_modifier(string, state):
         string = '*Empty reply, try regenerating*'
     else:
         output_file = Path(f'extensions/moztts/outputs/{state["character_menu"]}_{int(time.time())}.wav')
-        voice_string = f'--model_name={params["voice"]}'
-        if "vocoder" in params['voice']:
-            voice_string = f'--vocoder_name={params["voice"]}'
-        command = ["tts",f'--text="{string}"', f"{voice_string}","--emotion=true",f'--use_cuda={params["use_cuda"]}' ,f'--out_path={output_file}']
-        if params["speaker"] != "":
-            speaker_string = f"--speaker_idx={params['speaker']}"
-            command.append(speaker_string)
-        print("\ncommand: "+" ".join(command)+"\n")
-        subprocess.run(command, capture_output=False, text=True)
+        tts(string, output_file)
+        # voice_string = f'--model_name={params["voice"]}'
+        # if "vocoder" in params['voice']:
+        #     voice_string = f'--vocoder_name={params["voice"]}'
+        # command = ["tts",f'--text="{string}"', f"{voice_string}","--emotion=true",f'--use_cuda={params["use_cuda"]}' ,f'--out_path={output_file}']
+        # if params["speaker"] != "":
+        #     speaker_string = f"--speaker_idx={params['speaker']}"
+        #     command.append(speaker_string)
+        # subprocess.run(command, capture_output=True, text=True)
 
         autoplay = 'autoplay' if params['autoplay'] else ''
         string = f'<audio src="file/{output_file.as_posix()}" controls {autoplay}></audio>'
@@ -201,7 +288,6 @@ def setup():
 def ui():
     model_list = load_model_list()
     speaker_list = load_speaker_list(params['voice'])
-    print( speaker_list)
 
     # Gradio elements
     with gr.Accordion("Mozilla TTS"):

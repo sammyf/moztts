@@ -7,11 +7,11 @@
 	"Beezle": {
 		"description": "Nasal male voice",
 		"voice": "tts_models/en/vctk/vits",
-		"speaker": "p264"
+		"speaker": "p376"
 	},
-	"Beezle Alternative": {
-		"description": "Less nasal male voice",
+	"Cypheria": {
+		"description": "fast intelligent sounding female",
 		"voice": "tts_models/en/vctk/vits",
-		"speaker": "p340"
+		"speaker": "p339"
 	}
 }
