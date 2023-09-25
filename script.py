@@ -3,7 +3,8 @@ from pathlib import Path
 
 import gradio as gr
 import torch
-from modules import chat, shared
+from modules import chat, shared, ui_chat
+from modules.utils import gradio
 import re
 import subprocess
 import json
@@ -178,20 +179,23 @@ def load_speaker_list( model):
         speaker_list.append(spkr[0])
     return speaker_list
 
-def remove_tts_from_history():
-    for i, entry in enumerate(shared.history['internal']):
-        shared.history['visible'][i] = [shared.history['visible'][i][0], entry[1]]
+def remove_tts_from_history(history):
+    for i, entry in enumerate(history['internal']):
+        history['visible'][i] = [history['visible'][i][0], entry[1]]
 
+    return history
 
-def toggle_text_in_history():
-    for i, entry in enumerate(shared.history['visible']):
+def toggle_text_in_history(history):
+    for i, entry in enumerate(history['visible']):
         visible_reply = entry[1]
         if visible_reply.startswith('<audio'):
             if params['show_text']:
-                reply = shared.history['internal'][i][1]
-                shared.history['visible'][i] = [shared.history['visible'][i][0], f"{visible_reply.split('</audio>')[0]}</audio>\n\n{reply}"]
+                reply = history['internal'][i][1]
+                history['visible'][i] = [history['visible'][i][0], f"{visible_reply.split('</audio>')[0]}</audio>\n\n{reply}"]
             else:
-                shared.history['visible'][i] = [shared.history['visible'][i][0], f"{visible_reply.split('</audio>')[0]}</audio>"]
+                history['visible'][i] = [history['visible'][i][0], f"{visible_reply.split('</audio>')[0]}</audio>"]
+
+    return history
 
 
 def state_modifier(state):
@@ -239,10 +243,14 @@ def history_modifier(history):
 
     return history
 
+def fixHash27(s):
+    s=s.replace("&#x27;","'");
+    return s
 
 def output_modifier(string, state):
     global current_params, streaming_state, ttsconfig, lastCharacter, last_voice
 
+    string = fixHash27(string)
     if not params['activate']:
         return string
 
@@ -281,7 +289,6 @@ def output_modifier(string, state):
     shared.processing_message = "*Is typing...*"
     return string
 
-
 def setup():
     pass
 
@@ -308,38 +315,43 @@ def ui():
             clear = gr.Button('Permanently delete generated audios files from your drive')
             clear_cancel = gr.Button('Cancel', visible=False)
             clear_confirm = gr.Button('Confirm (cannot be undone)', variant="stop", visible=False)
+
         gr.Markdown('you need to write something to the LLM and then reload the page if the selected voices needs a speaker idx.')
-    # Convert history with confirmation
+
+
     convert_arr = [convert_confirm, convert, convert_cancel]
     convert.click(lambda: [gr.update(visible=True), gr.update(visible=False), gr.update(visible=True)], None, convert_arr)
     convert_confirm.click(
         lambda: [gr.update(visible=False), gr.update(visible=True), gr.update(visible=False)], None, convert_arr).then(
-        remove_tts_from_history, None, None).then(
-        chat.save_history, shared.gradio['mode'], None, show_progress=False).then(
-        chat.redraw_html, shared.reload_inputs, shared.gradio['display'])
-    # Clear outputs with confirmation
-    clear_arr = [clear_confirm, clear, clear_cancel]
-    clear.click(lambda: [gr.update(visible=True), gr.update(visible=False), gr.update(visible=True)], None, clear_arr)
-    clear_confirm.click(
-        lambda: [gr.update(visible=False), gr.update(visible=True), gr.update(visible=False)], None, clear_arr).then(
-        clear_output_dir, None, None).then(
-        chat.save_history, shared.gradio['mode'], None, show_progress=False).then(
-        chat.redraw_html, shared.reload_inputs, shared.gradio['display'])
+        remove_tts_from_history, gradio('history'), gradio('history')).then(
+        chat.save_history, gradio('history', 'unique_id', 'character_menu', 'mode'), None).then(
+        chat.redraw_html, gradio(ui_chat.reload_arr), gradio('display'))
 
     convert_cancel.click(lambda: [gr.update(visible=False), gr.update(visible=True), gr.update(visible=False)], None, convert_arr)
+
+    # Clear outputs with confirmation
+    clear_arr = [clear_confirm, clear, clear_cancel]
+    clear.click(lambda: [gr.update(visible=True), gr.update(visible=False), gr.update(visible=True)], None,
+                clear_arr)
+    clear_confirm.click(
+        lambda: [gr.update(visible=False), gr.update(visible=True), gr.update(visible=False)], None, convert_arr).then(
+        clear_output_dir, None, None).then(
+        chat.save_history, gradio('history', 'unique_id', 'character_menu', 'mode'), None).then(
+        chat.redraw_html, gradio(ui_chat.reload_arr), gradio('display'))
+    clear_cancel.click(lambda: [gr.update(visible=False), gr.update(visible=True), gr.update(visible=False)], None, clear_arr)
 
     # Toggle message text in history
     show_text.change(
         lambda x: params.update({"show_text": x}), show_text, None).then(
-        toggle_text_in_history, None, None).then(
-        chat.save_history, shared.gradio['mode'], None, show_progress=False).then(
-        chat.redraw_html, shared.reload_inputs, shared.gradio['display'])
+        toggle_text_in_history, gradio('history'), gradio('history')).then(
+        chat.save_history, gradio('history', 'unique_id', 'character_menu', 'mode'), None).then(
+        chat.redraw_html, gradio(ui_chat.reload_arr), gradio('display'))
 
     # Event functions to update the parameters in the backend
     activate.change(lambda x: params.update({"activate": x}), activate, None)
     autoplay.change(lambda x: params.update({"autoplay": x}), autoplay, None)
     use_cuda.change(lambda x: params.update({"use_cuda": x}), use_cuda, None)
-    voice.change(lambda x: params.update({"voice": x}), voice, None)
+    voice.change(lambda x: params.update({"voice": x}), voice, None).then(chat.redraw_html, gradio(ui_chat.reload_arr), gradio('display'));
     speaker.change(lambda x: params.update({"speaker": x}), speaker, None)
 
 
