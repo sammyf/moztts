@@ -2,7 +2,7 @@
 
 ## THIS EXTENSION IS NOT SUPPORTED ANYMORE!
 I'm just fed up with basically every other update to oobabooga's TextGenerationWebui breaking the extension API,
- and simple technical questions resulting in bans from Discord and the Subreddit. I still mails about issues, and I'll try to at least point you in the correct direction to solve the problems which will definitely creep up increasingly over time, but no guarantee of anything. Your best bet if you want to use the functionality of this extension is to fork it and make it your own. Cheers.
+ and simple technical questions resulting in bans from Discord and the Subreddit. I still get mails about issues, and I'll try to at least point you in the correct direction to solve the problems which will definitely creep up increasingly over time, but no guarantee of anything. Your best bet if you want to use the functionality of this extension is to fork it and make it your own. Cheers.
  
 #### What's new
 there is a new file called tts_character_config.json. You can edit it to preset voices for your custom characters. The key should be the same as the character's name, and the description field isn't actively used, but nifty to add notes for the voice.
